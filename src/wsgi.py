@@ -13,6 +13,7 @@ def get_wsgi_application():
         SQLALCHEMY_DATABASE_URI=settings.SQLALCHEMY_DATABASE_URI,
         SQLALCHEMY_TRACK_MODIFICATIONS=settings.SQLALCHEMY_TRACK_MODIFICATIONS,
     )
+    app.json.sort_keys = settings.JSON_SORT_KEYS
     db.init_app(app)
     ma.init_app(app)
     with app.app_context():
