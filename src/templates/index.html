@@ -25,17 +25,34 @@
     <div class="content">
       <form id="form">
         <label for="name">Name: </label>
-        <input id="name" name="name" placeholder="Name" required />
+        <input name="name" id="name" placeholder="Name" required />
+        <select name="language" id="language" required></select>
         <button type="submit">Get Cookie</button>
       </form>
       <img id="image" src="" alt="Awaiting your cookie" />
     </div>
     <script>
+      const API = "/api/v1/fortune/cookie";
+
+      async function generateOptions() {
+        const response = await fetch(API, { method: "OPTIONS" });
+        const data = await response.json();
+        const choices = data.actions["POST"].language.choices;
+        const select = document.getElementById("language");
+        choices.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.value;
+          option.innerHTML = item.display_name;
+          select.appendChild(option);
+        });
+      }
+      generateOptions();
+
       var formElement = document.getElementById("form");
       formElement.addEventListener("submit", async (e) => {
         e.preventDefault();
         var url = new URL(window.location);
-        url.pathname = "/api/v1/fortune/cookie";
+        url.pathname = API;
         var formData = new FormData(formElement);
         var payload = Object.fromEntries(formData);
         var response = await fetch(url.toString(), {
@@ -44,6 +61,10 @@
           body: JSON.stringify(payload),
         });
         var data = await response.json();
+        if (response.status > 399 && response.status < 500) {
+          alert(JSON.stringify({ [response.status]: data }));
+          return;
+        }
         document.getElementById("image").src = data.encoded;
       });
     </script>

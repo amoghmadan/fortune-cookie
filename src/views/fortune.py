@@ -14,19 +14,60 @@ class CookieView(views.MethodView):
 
     schema_class = IdentifierSchema
 
+    def options(self, *args, **kwargs):
+        schema = self.schema_class()
+        data = {
+            "name": "Fortune Cookie - Generate",
+            "description": "Randomly get a new fortune cookie.",
+            "renders": ["application/json"],
+            "parses": ["application/json"],
+            "actions": {
+                "POST": {
+                    "name": {
+                        "type": "string",
+                        "required": True,
+                        "read_only": False,
+                        "label": "Name",
+                    },
+                    "language": {
+                        "type": "string",
+                        "required": True,
+                        "read_only": False,
+                        "label": "Language",
+                        "choices": [
+                            {"display_name": display_name, "value": value}
+                            for value, display_name in zip(
+                                schema.fields["language"].validate.choices,
+                                schema.fields["language"].validate.labels,
+                            )
+                        ],
+                    },
+                    "encoded": {
+                        "type": "string",
+                        "required": False,
+                        "read_only": True,
+                        "label": "Encoded",
+                    },
+                }
+            },
+        }
+        return jsonify(data), HTTPStatus.OK
+
     def post(self, *args, **kwargs):
         schema = self.schema_class()
         try:
             validated_data = schema.load(request.json)
-        except ValidationError as e:
-            return jsonify(e.messages), HTTPStatus.BAD_REQUEST
-        try:
-            files = [_ for _ in settings.COOKIE_DIR.iterdir() if _.is_file()]
+            language_dir = settings.COOKIE_DIR / validated_data["language"]
+            files = [_ for _ in language_dir.iterdir() if _.is_file()]
             cookie = choices(files)[0]
         except IndexError:
             return jsonify({"detail": "No Cookie Found"}), HTTPStatus.NOT_FOUND
+        except ValidationError as e:
+            return jsonify(e.messages), HTTPStatus.BAD_REQUEST
+
         with open(cookie, "rb") as c:
             encoded = b64encode(c.read())
+
         base64string = f"data:image/{cookie.suffix[1:]};base64,{encoded.decode()}"
         data = {"encoded": base64string, **validated_data}
         return jsonify(schema.dump(data)), HTTPStatus.CREATED
